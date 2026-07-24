@@ -1,0 +1,1033 @@
+classdef ThinHorLineAnalysis < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        ThinHorizontalLineAnalysisv31UIFigure  matlab.ui.Figure
+        Panel                           matlab.ui.container.Panel
+        HoldCheckBox                    matlab.ui.control.CheckBox
+        UIAxes_profile                  matlab.ui.control.UIAxes
+        ImagesProfilePanel              matlab.ui.container.Panel
+        ActiveLabel                     matlab.ui.control.Label
+        RawLabel                        matlab.ui.control.Label
+        SamsungDisplayMintakLeeLabel    matlab.ui.control.Label
+        Image_raw                       matlab.ui.control.Image
+        Image_active                    matlab.ui.control.Image
+        RightPanel                      matlab.ui.container.Panel
+        UITable_result                  matlab.ui.control.Table
+        TextArea_folder                 matlab.ui.control.TextArea
+        LeftPanel                       matlab.ui.container.Panel
+        ShowAdditionalGraphsCheckBox    matlab.ui.control.CheckBox
+        Rotation90CounterclockCheckBox  matlab.ui.control.CheckBox
+        mimFileTelecentricCheckBox      matlab.ui.control.CheckBox
+        Button_stop                     matlab.ui.control.Button
+        Label_state                     matlab.ui.control.Label
+        UITable_parameter               matlab.ui.control.Table
+        Button_run                      matlab.ui.control.Button
+        Button_open                     matlab.ui.control.Button
+    end
+
+    
+    properties (Access = public)
+        rawImg;
+        activeImg;
+        directory;
+        resize_info;
+        fileNameOrder;
+        maxPeak2Valley;
+        avgPeak2Valley;
+        Dprofile;
+        x_mm;
+        start_x;
+        end_x;
+        start_y;
+        end_y;
+        x_cpcm;
+        profile_fft;
+        stop;
+        result;
+        n_calculate;
+        start_mm;
+        show_plot;
+        profile_struct;
+        rotate;
+    end
+    
+    methods (Access = public)
+        
+        function [maxPeak2Valley, avgPeak2Valley, Dprofile, ActiveImage_avg, x_mm, start_x, end_x, start_y, end_y, x_cpcm, profile_fft, maxPeak, Dprofile_cut, peaks2valleys] ...
+                = showData(app, ActiveImage, resize_V, resize_H, avgFiltSize, avgRefFiltSize, ROI_x, ROI_y,...
+                           panel_long_mm, scanWidth_mm, cut_mmLow, cut_mmHigh, crop_left, crop_right, crop_top, crop_bottom)
+
+            try
+
+            ActiveImage_resized_temp = imresize(ActiveImage,[resize_V,resize_H]);
+            ActiveImage_resized = ActiveImage_resized_temp(1+crop_top:end-crop_bottom, 1+crop_left:end-crop_right);
+            hA = fspecial('average',[avgFiltSize, avgFiltSize]);
+            ActiveImage_avg = imfilter(ActiveImage_resized,hA,'symmetric');
+            hA_ref = fspecial('average',[avgRefFiltSize, avgRefFiltSize]);
+            ActiveImage_ref = imfilter(ActiveImage_resized,hA_ref,'symmetric');
+
+            %center_x = round(resize_H/2);
+            %center_y = round(resize_V/2);
+            center_x = round(size(ActiveImage_resized,2)/2);
+            center_y = round(size(ActiveImage_resized,1)/2);
+            start_x = floor(center_x-ROI_x/2+1);
+            end_x = floor(center_x+ROI_x/2);
+            start_y = floor(center_y-ROI_y/2+1);
+            end_y = floor(center_y+ROI_y/2);
+            
+            profile = mean(ActiveImage_avg(start_y:end_y,start_x:end_x));
+            profile_ref = mean(ActiveImage_ref(start_y:end_y,start_x:end_x));
+            Dprofile = 100*(profile - profile_ref)./profile_ref;
+
+            mmPP = panel_long_mm / resize_H;
+            x_mm = mmPP*(1:size(profile,2));
+            [peaks,locPeaks]=findpeaks(Dprofile, x_mm, 'MinPeakWidth',0.1); % 0.1mm 이상 Peak만 Search
+            [valleys,locValleys]=findpeaks(-Dprofile, x_mm, 'MinPeakWidth',0.1); % 0.1mm 이상 Peak만 Search
+            valleys=-valleys;
+
+            peaks2valleys=zeros(size(locPeaks,2),1);
+            maxPeak = 0;
+            for k = 1:size(locPeaks,2)
+                peak2valleys_temp = max(peaks(k)-valleys(find(abs(locPeaks(k)-locValleys)<scanWidth_mm,10,'first')));
+                if isempty(peak2valleys_temp) == 0
+                    peaks2valleys(k) = peak2valleys_temp;
+                end
+                if peaks2valleys(k) == max(peaks2valleys)
+                    maxPeak = peaks(k);
+                end
+                % 각 Peak 기준 Scan Width 이내 가까운 2개 Valley를 찾고 2개 중 Peak to Valley 값이 큰 값을 선택
+            end
+
+            maxPeak2Valley = max(peaks2valleys);
+            avgPeak2Valley = mean(peaks2valleys);
+
+            peaks2valleys = sort(peaks2valleys,'descend');
+
+            x_cpcm = (1:floor(ROI_x/2)-1)/(mmPP*ROI_x)*10;
+            
+            %임시 추가
+            %Dprofile = imresize(Dprofile,[1,size(Dprofile,2)*3]);
+
+            profile_fft_temp0 = fft(Dprofile);
+            profile_fft_temp = abs(profile_fft_temp0);
+            profile_fft = profile_fft_temp(2:floor(ROI_x/2));
+
+            %profile_fft_temp(1);
+
+             % 주파수 Cut 추가
+            interval_cpcm = x_cpcm(1);
+            
+            profile_fft_temp0(2:round(10/(cut_mmHigh*interval_cpcm))) = 0;
+            profile_fft_temp0(end-round(10/(cut_mmHigh*interval_cpcm))+2:end) = 0;
+            profile_fft_temp0(round(10/(cut_mmLow*interval_cpcm))+2:end-round(10/(cut_mmLow*interval_cpcm))) = 0;
+
+            Dprofile_cut = ifft(profile_fft_temp0);
+
+            if app.show_plot == 1
+                h=figure(4); set(h, "Name","Profile"), plot(x_mm,profile)
+                hold on
+                plot(x_mm,profile_ref)
+                hold off
+
+                profile_fft_temp1 = abs(profile_fft_temp0);
+                profile_fft_temp2 = profile_fft_temp1(2:floor(ROI_x/2));
+                %h=figure(5); set(h, "Name","FFT"), plot(x_cpcm(1:100), profile_fft_temp(2:101))
+                %h=figure(6); set(h, "Name","FFT(cut)"), plot(x_cpcm(1:100), profile_fft_temp2(1:100))
+                
+                h=figure(5); set(h, "Name","FFT"), plot(x_cpcm(1:end), profile_fft(1:end))
+                h=figure(6); set(h, "Name","FFT(cut)"), plot(x_cpcm(1:end), profile_fft_temp2(1:end))
+
+                img_cut = imresize(Dprofile_cut,[ROI_y,ROI_x]);
+                h=figure(7); set(h, "Name","ROI Wave(cut)"), imshow(img_cut,[])
+            end
+
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+            
+        end
+    end
+    
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Code that executes after component creation
+        function startupFcn(app)
+
+            try
+
+            inputPara = [50;0;28;140;2000;1000;158.8;2;11;1;1;1;3.4;3.6;0;0;0;0];
+            app.UITable_parameter.Data = inputPara;
+            
+            app.rawImg = ones(100,133)*0.7;
+            app.activeImg = ones(100,133)*0.7;
+            app.Image_raw.ImageSource = cat(3,app.rawImg,app.rawImg,app.rawImg);
+            app.Image_active.ImageSource = cat(3,app.activeImg,app.activeImg,app.activeImg);
+            app.Label_state.Text = 'Please open the folder(*.TIF).';
+            
+            app.UITable_result.ColumnName = {'File Name';'Max. dL/L(%)(1,1)';'Avg. dL/L(%)(1,1)';'5% dL/L(%)(1,1)';'10% dL/L(%)(1,1)';'15% dL/L(%)(1,1)';'20% dL/L(%)(1,1)';};
+            app.UITable_result.ColumnWidth = {431,115,115,115,115,115,115};
+            app.show_plot = 1;
+            app.stop = 1;
+
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+
+        end
+
+        % Image clicked function: Image_raw
+        function Image_rawClicked(app, event)
+            
+            try
+            
+            h = figure(1); set(h, "Name","Raw Image"), imshow(app.rawImg,[]);
+
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+
+        end
+
+        % Image clicked function: Image_active
+        function Image_activeClicked(app, event)
+            
+            try
+
+            h = figure(2); set(h, "Name","Active Image"), ...
+            imshow(app.activeImg,[0 1.2*max(max(app.activeImg(app.start_y:app.end_y, app.start_x:app.end_x)))]);
+            line([app.start_x app.start_x app.end_x app.end_x app.start_x], ...
+                 [app.start_y app.end_y app.end_y app.start_y app.start_y], 'LineStyle',':', 'Color','y', 'LineWidth', 1)
+
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+
+        end
+
+        % Button pushed function: Button_open
+        function Button_openPushed(app, event)
+            
+         try
+
+         clear app.resize_info
+         if isprop(app,'directory') == 0
+             app.directory = cd;
+         end
+
+         path = uigetdir(app.directory,'Select the Folder containing the TIF Y Image files.');
+         if (path ~=0)
+             app.directory = path;
+             file_list=[dir([path '\*_Y.tif']); dir([path '\*_Y_Active.tif']); dir([path '\*.mim'])];
+             app.UITable_result.Data=[];
+
+             app.profile_struct=struct('Dprofile', []);
+
+             for i=1:length(file_list)
+                 app.UITable_result.Data{i,1}=file_list(i).name(1:end-4);
+                 app.UITable_result.Data{i,2}=[];
+                 app.UITable_result.Data{i,3}=[];
+                 app.UITable_result.Data{i,4}=[];
+                 app.UITable_result.Data{i,5}=[];
+                 app.UITable_result.Data{i,6}=[];
+                 app.UITable_result.Data{i,7}=[];
+                 app.profile_struct(i).Dprofile = [];
+             end
+             app.TextArea_folder.Value = app.directory;
+             app.resize_info = struct('H',[],'V',[]);
+             app.resize_info = repmat(app.resize_info,1,length(file_list));
+         else
+             return
+         end
+
+         %UITable_parameterDisplayDataChanged(app, event)
+
+         app.Label_state.Text = 'File Open Complete.';
+
+         
+         catch ME
+             message = {};
+             for i = 1:size(ME.stack)
+                 add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                 message = [message; add_message];
+             end
+             msgbox([ME.message; ' '; message],'Error');
+         end
+            
+
+        end
+
+        % Double-clicked callback: UITable_result
+        function UITable_resultDoubleClicked(app, event)
+            
+            try
+
+            if app.mimFileTelecentricCheckBox.Value == 1
+                extention = '.mim';
+            else
+                extention = '.tif';
+            end
+
+            if isprop(event, 'InteractionInformation') == 1
+                displayRow = event.InteractionInformation.DisplayRow;
+            else
+                displayRow =app.fileNameOrder;
+            end
+            
+            parameters = app.UITable_parameter.Data;
+            th = parameters(1)/100; % Threshold(0<th<1)
+            medFiltSize = parameters(2);
+            avgFiltSize = parameters(3);
+            avgRefFiltSize = parameters(4);
+            ROI_x = parameters(5);
+            ROI_y = parameters(6);
+            panel_long_mm = parameters(7);
+            scanWidth_mm = parameters(8);
+            angleNameOrder = parameters(9);
+            timeNameOrder = parameters(10);
+            division_x = parameters(11);
+            division_y = parameters(12);
+            cut_mmLow = parameters(13);
+            cut_mmHigh = parameters(14);
+            crop_left = parameters(15);
+            crop_right = parameters(16);
+            crop_top = parameters(17);
+            crop_bottom = parameters(18);
+
+            fileName = app.UITable_result.Data{displayRow,1};
+
+            app.Label_state.Text = 'Loading Parameters Complete.';
+            pause(0.01);
+
+
+            if angleNameOrder == 0 || timeNameOrder == 0
+
+            else
+
+            if isempty(app.resize_info(displayRow).H)
+                
+                fileNameSplit = split(fileName,'_');
+                fileNameSplit_0 = fileNameSplit;
+                fileNameSplit_0{angleNameOrder} = '0';
+                fileNameSplit_0{timeNameOrder} = '*';
+                fileName_0_cell = join(fileNameSplit_0,'_');
+                fileName_0 = dir([app.directory '\' fileName_0_cell{1} extention]).name;
+
+                app.Label_state.Text = 'Opening 0deg. Image...';
+                pause(0.01);
+
+                rawImage_0=importdata([app.directory '\' fileName_0]);
+
+                if strcmp(extention,'.mim') == 1
+                    rawImage_0 = imrotate(double(rawImage_0),90);
+                end
+
+                if app.rotate == 1
+                    rawImage_0 = imrotate(rawImage_0, 90);
+                end
+
+                app.Label_state.Text = 'Cropping 0deg. Image...';
+                pause(0.01);
+
+                ActiveImage_0 = getActiveImage5(rawImage_0, th, 0, medFiltSize, 0, 0);
+
+                resize_V = size(ActiveImage_0,1);
+                resize_H = size(ActiveImage_0,2);
+
+
+                % 관련 파일 Resize 정보 저장
+                fileNameSplit_temp = fileNameSplit;
+                fileNameSplit_temp{angleNameOrder} = '*';
+                fileNameSplit_temp{timeNameOrder} = '*';
+                fileName_temp_cell = join(fileNameSplit_temp,'_');
+                fileName_temp_struct = dir([app.directory '\' fileName_temp_cell{1} extention]);
+
+                for i = 1:size(fileName_temp_struct,1)
+                    releatedFileOrder = find(strcmp(app.UITable_result.Data,fileName_temp_struct(i).name(1:end-4)));
+                    app.resize_info(releatedFileOrder).V = resize_V;
+                    app.resize_info(releatedFileOrder).H = resize_H;
+                end
+
+            else
+                resize_V = app.resize_info(displayRow).V;
+                resize_H = app.resize_info(displayRow).H;
+            end
+
+            end
+
+            app.Label_state.Text = 'Opening the Image...';
+            pause(0.01);
+
+            rawImage = importdata([app.directory '\' fileName extention]);
+            
+            if strcmp(extention,'.mim') == 1
+                rawImage = imrotate(double(rawImage),90);
+            end
+
+            if app.rotate == 1
+                rawImage = imrotate(rawImage, 90);
+            end
+
+            app.Label_state.Text = 'Cropping the Image...';
+            pause(0.01);
+
+            if th > 0
+                ActiveImage = getActiveImage5(rawImage, th, 0, medFiltSize, 0, 0);
+            else
+                ActiveImage = rawImage;
+            end
+                
+
+            if angleNameOrder == 0 || timeNameOrder == 0
+                resize_V = size(ActiveImage,1);
+                resize_H = size(ActiveImage,2);
+            end
+
+
+
+            app.Image_raw.ImageSource = cat(3,rawImage/max(max(rawImage)),rawImage/max(max(rawImage)),rawImage/max(max(rawImage)));
+            app.rawImg = rawImage;
+
+            app.Label_state.Text = 'Running...';
+            pause(0.01);
+
+
+            % 영역 분할 반영
+            columnName = app.UITable_result.ColumnName(1);
+            columWidth = app.UITable_result.ColumnWidth(1);
+
+            for i = 1:division_x
+                for j = 1:division_y
+                    addColumnName = ['Max. dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['Avg. dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['5% dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['10% dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['15% dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['20% dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+
+                    addrowName = app.UITable_result.ColumnWidth(2);
+                    columWidth = [columWidth addrowName addrowName addrowName addrowName addrowName addrowName];
+                end
+            end
+
+            app.UITable_result.ColumnName = columnName;
+            app.UITable_result.ColumnWidth = columWidth;
+
+            app.n_calculate = division_x*division_y; % 계산 횟수
+
+            resize_H_dividied = floor(resize_H / division_x);
+            resize_V_dividied = floor(resize_V / division_y);
+            panel_long_mm_divided = panel_long_mm / division_x;
+            app.result = struct('maxPeak2Valley', [], 'avgPeak2Valley', [], 'Dprofile', [], 'x_mm', [], 'x_cpcm', [], 'profile_fft', [],...
+                                'division_x', [], 'division_y', [], 'activeImage', [], 'maxPeak', [], 'Dprofile_cut', [], 'peaks2valleys', [],...
+                                'peak2valley5p', [],'peak2valley10p', [],'peak2valley15p', [], 'peak2valley20p', [], 'peakFFT_mm', [], 'peakFFT_ratio', []);
+            app.result = repmat(app.result,1, app.n_calculate);
+
+            n = 0;
+            for i = 1:division_x
+                for j = 1:division_y
+                    n = n+1;
+
+                    ActiveImage_divided = ActiveImage(1+(j-1)*floor(size(ActiveImage,1)/division_y):j*floor(size(ActiveImage,1)/division_y), ...
+                                                      1+(i-1)*floor(size(ActiveImage,2)/division_x):i*floor(size(ActiveImage,2)/division_x));
+
+                    [app.result(n).maxPeak2Valley, app.result(n).avgPeak2Valley, app.result(n).Dprofile, ActiveImage_avg, app.result(n).x_mm, ...
+                     app.start_x, app.end_x, app.start_y, app.end_y, app.result(n).x_cpcm, app.result(n).profile_fft, app.result(n).maxPeak, ...
+                     app.result(n).Dprofile_cut, app.result(n).peaks2valleys]...
+                    = showData(app, ActiveImage_divided, resize_V_dividied, resize_H_dividied, avgFiltSize, avgRefFiltSize, ROI_x, ROI_y, ...
+                               panel_long_mm_divided, scanWidth_mm, cut_mmLow, cut_mmHigh, crop_left, crop_right, crop_top, crop_bottom);
+
+                    % Peak to Valley 상위 지수
+                    %app.result(n).peaks2valleys;
+                    n_Peaks= size(app.result(n).peaks2valleys,1);
+                    n_peaks5p = round(0.05*n_Peaks);
+                    n_peaks10p = round(0.1*n_Peaks);
+                    n_peaks15p = round(0.15*n_Peaks);
+                    n_peaks20p = round(0.2*n_Peaks);
+
+                    app.result(n).peak2valley5p = mean(app.result(n).peaks2valleys(1:n_peaks5p));
+                    app.result(n).peak2valley10p = mean(app.result(n).peaks2valleys(1:n_peaks10p));
+                    app.result(n).peak2valley15p = mean(app.result(n).peaks2valleys(1:n_peaks15p));
+                    app.result(n).peak2valley20p = mean(app.result(n).peaks2valleys(1:n_peaks20p));
+
+                    app.UITable_result.Data{displayRow,n*6-4}=app.result(n).maxPeak2Valley;
+                    app.UITable_result.Data{displayRow,n*6-3}=app.result(n).avgPeak2Valley;
+                    app.UITable_result.Data{displayRow,n*6-2}=app.result(n).peak2valley5p;
+                    app.UITable_result.Data{displayRow,n*6-1}=app.result(n).peak2valley10p;
+                    app.UITable_result.Data{displayRow,n*6}=app.result(n).peak2valley15p;
+                    app.UITable_result.Data{displayRow,n*6+1}=app.result(n).peak2valley20p;
+
+                    % FFT 1st to 5th Peak Wavelength & Ratio
+                    [peaks_FFT,locPeaks_FFT]=findpeaks(app.result(n).profile_fft, app.result(n).x_cpcm);
+                    [peaks_FFT_sorted, I] = sort(peaks_FFT,'descend');
+                    locPeaks_FFT_sorted = locPeaks_FFT(I);
+                    app.result(n).peakFFT_mm = 10./locPeaks_FFT_sorted;
+                    app.result(n).peakFFT_ratio = peaks_FFT_sorted/peaks_FFT_sorted(1,1)*100;
+                    
+                    ActiveImage_avg = ActiveImage_avg - min(min(ActiveImage_avg(app.start_y:app.end_y,app.start_x:app.end_x))); % 임시 추가
+                    app.Image_active.ImageSource = cat(3,ActiveImage_avg/(1.2*max(max(ActiveImage_avg(app.start_y:app.end_y,app.start_x:app.end_x)))),ActiveImage_avg/(1.2*max(max(ActiveImage_avg(app.start_y:app.end_y,app.start_x:app.end_x)))),ActiveImage_avg/(1.2*max(max(ActiveImage_avg(app.start_y:app.end_y,app.start_x:app.end_x)))));
+                    app.activeImg = ActiveImage_avg;
+                    plot(app.result(n).x_mm, app.result(n).Dprofile,'Parent', app.UIAxes_profile)
+                    line([0 app.result(n).x_mm(end)],[app.result(n).maxPeak app.result(n).maxPeak], 'color', 'r', 'LineStyle', ':', 'Parent', app.UIAxes_profile)
+                    line([0 app.result(n).x_mm(end)],[app.result(n).maxPeak-app.result(n).maxPeak2Valley app.result(n).maxPeak-app.result(n).maxPeak2Valley], 'color', 'r', 'LineStyle', ':', 'Parent', app.UIAxes_profile)
+                    app.result(n).division_x = i;
+                    app.result(n).division_y = j;
+
+                    app.Image_active.ImageSource(app.start_y:app.end_y,app.start_x-1:app.start_x+1,1:2) = 1;
+                    app.Image_active.ImageSource(app.start_y:app.end_y,app.end_x-1:app.end_x+1,1:2) = 1;
+                    app.Image_active.ImageSource(app.start_y-1:app.start_y+1,app.start_x:app.end_x,1:2) = 1;
+                    app.Image_active.ImageSource(app.end_y-1:app.end_y+1,app.start_x:app.end_x,1:2) = 1;
+                    app.result(n).activeImage = app.Image_active.ImageSource;
+
+                end
+            end
+
+            app.UITable_result.Data = app.UITable_result.Data(:,1:1+6*n);
+
+            app.start_mm = (resize_H/division_x-ROI_x)*(panel_long_mm / resize_H)/2;
+
+            app.Label_state.Text = 'Complete.';
+
+            app.profile_struct(displayRow).Dprofile = app.result(1).Dprofile;
+
+
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+            
+           
+
+        end
+
+        % Button pushed function: Button_run
+        function Button_runPushed(app, event)
+            
+            try
+
+            
+            % Excel Writing
+
+            file_save = ['results_' erase(datestr(now),{'-', ' ', ':'}) '.xlsx'];
+            xlswrite([app.directory '\' file_save], {'Please Wait...'}, 3, 'A1');
+            Excel = actxserver('Excel.Application');
+            Workbooks = Excel.Workbooks;
+            Excel.Visible=1;
+            Workbook=Workbooks.Open([app.directory '\' file_save]);
+            Sheets = Excel.ActiveWorkBook.Sheets;
+            sheet1 = get(Sheets, 'Item', 1);
+            sheet2 = get(Sheets, 'Item', 2);
+            sheet3 = get(Sheets, 'Item', 3);
+            %invoke(sheet1, 'Activate');
+            %invoke(sheet2, 'Activate');
+            sheet1.Activate;
+            sheet2.Activate;
+            sheet3.Activate;
+            %Activesheet = Excel.Activesheet;
+
+            set(get(sheet1,'Range',['A' num2str(1)]),'Value', 'File Name');
+            set(get(sheet1,'Range',['B' num2str(1)]),'Value', 'Max.dL/L(%)');
+            set(get(sheet1,'Range',['C' num2str(1)]),'Value', 'Avg.dL/L(%)');
+            set(get(sheet1,'Range',['D' num2str(1)]),'Value', '5% dL/L(%)');
+            set(get(sheet1,'Range',['E' num2str(1)]),'Value', '10% dL/L(%)');
+            set(get(sheet1,'Range',['F' num2str(1)]),'Value', '15% dL/L(%)');
+            set(get(sheet1,'Range',['G' num2str(1)]),'Value', '20% dL/L(%)');
+            
+            set(get(sheet1,'Range',['I' num2str(1)]),'Value', 'mm');
+
+            set(get(sheet2,'Range',['A' num2str(1)]),'Value', 'File Name');
+            set(get(sheet2,'Range',['C' num2str(1)]),'Value', 'mm');
+
+            set(get(sheet3,'Range',['A' num2str(1)]),'Value', 'File Name');
+            set(get(sheet3,'Range',['B' num2str(1)]),'Value', 'Images');
+            
+            app.stop = 0;
+
+            NumberOfFiles = size(app.UITable_result.Data,1);
+
+            n = 0;
+            for i = 1:NumberOfFiles
+
+                if app.stop == 1
+                    app.Label_state.Text = 'Stoped.';
+                    invoke(Workbook, 'Save');
+                    invoke(Excel, 'Quit');
+                    break
+                end
+
+                app.fileNameOrder = i;
+
+                UITable_resultDoubleClicked(app, event)
+                
+                for j = 1:app.n_calculate
+                n=n+1;
+       
+                % Data 저장
+                set(get(sheet1,'Range',['A' num2str(n+1)]),'Value', [app.UITable_result.Data{i,1} ...
+                '(' num2str(app.result(j).division_x) ',' num2str(app.result(j).division_y) ')']) ;
+                set(get(sheet1,'Range',['B' num2str(n+1)]),'Value', app.result(j).maxPeak2Valley);
+                set(get(sheet1,'Range',['C' num2str(n+1)]),'Value',app.result(j).avgPeak2Valley);
+                set(get(sheet1,'Range',['D' num2str(n+1)]),'Value',app.result(j).peak2valley5p);
+                set(get(sheet1,'Range',['E' num2str(n+1)]),'Value',app.result(j).peak2valley10p);
+                set(get(sheet1,'Range',['F' num2str(n+1)]),'Value',app.result(j).peak2valley15p);
+                set(get(sheet1,'Range',['G' num2str(n+1)]),'Value',app.result(j).peak2valley20p);
+                
+                % dL/L Profile 저장
+                set(get(sheet1,'Range',['I' num2str(n+1)]),'Value','dL/L(%)');
+                ExcelRowPoS = dec2base27(10);
+                ExcelRowPoE = dec2base27(10+length(app.result(j).Dprofile)-1);
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(1) ':' ExcelRowPoE num2str(1)]);
+                eActivesheetRange.Value = app.result(j).x_mm+app.start_mm;
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(n+1) ':' ExcelRowPoE num2str(n+1)]);
+                eActivesheetRange.Value = app.result(j).Dprofile;
+
+                % FFT Profile 저장
+                ExcelRowPoS = dec2base27(10+length(app.result(j).Dprofile)-1 +2);
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(1)]);
+                eActivesheetRange.Value = 'Cycle / cm';
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(n+1)]);
+                eActivesheetRange.Value = 'FFT Intensity';
+                
+                ExcelRowPoS = dec2base27(10+length(app.result(j).Dprofile)-1 +3);
+                ExcelRowPoE = dec2base27(10+length(app.result(j).Dprofile)-1 +3 +length(app.result(j).profile_fft)-1);
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(1) ':' ExcelRowPoE num2str(1)]);
+                eActivesheetRange.Value = app.result(j).x_cpcm;
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(n+1) ':' ExcelRowPoE num2str(n+1)]);
+                eActivesheetRange.Value = app.result(j).profile_fft;
+
+                % FFT 상위 5개 Peak 주기 및 Ratio 저장
+                ExcelRowPoS = dec2base27(10+length(app.result(j).Dprofile)-1 +3 +length(app.result(j).profile_fft)-1+2);
+                ExcelRowPoE = dec2base27(10+length(app.result(j).Dprofile)-1 +3 +length(app.result(j).profile_fft)-1+6);
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(1) ':' ExcelRowPoE num2str(1)]);
+                peakNames_mm = {'1st Peak(mm)', '2nd Peak(mm)', '3rd Peak(mm)', '4th Peak(mm)', '5th Peak(mm)'};
+                eActivesheetRange.Value = peakNames_mm;
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(n+1) ':' ExcelRowPoE num2str(n+1)]);
+                eActivesheetRange.Value = app.result(j).peakFFT_mm(1,1:5);
+
+                ExcelRowPoS = dec2base27(10+length(app.result(j).Dprofile)-1 +3 +length(app.result(j).profile_fft)-1+8);
+                ExcelRowPoE = dec2base27(10+length(app.result(j).Dprofile)-1 +3 +length(app.result(j).profile_fft)-1+12);
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(1) ':' ExcelRowPoE num2str(1)]);
+                peakNames_ratio = {'1st Peak(%)', '2nd Peak(%)', '3rd Peak(%)', '4th Peak(%)', '5th Peak(%)'};
+                eActivesheetRange.Value = peakNames_ratio;
+                eActivesheetRange = get(sheet1,'Range',[ExcelRowPoS num2str(n+1) ':' ExcelRowPoE num2str(n+1)]);
+                eActivesheetRange.Value = app.result(j).peakFFT_ratio(1,1:5);
+
+
+
+
+
+                % dL/L(frequency cut) Profile 저장
+                set(get(sheet2,'Range',['A' num2str(n+1)]),'Value', [app.UITable_result.Data{i,1} ...
+                '(' num2str(app.result(j).division_x) ',' num2str(app.result(j).division_y) ')']) ;
+                set(get(sheet2,'Range',['C' num2str(n+1)]),'Value','dL/L(%) Band Pass');
+                ExcelRowPoS = dec2base27(4);
+                ExcelRowPoE = dec2base27(4+length(app.result(j).Dprofile_cut)-1);
+                eActivesheetRange = get(sheet2,'Range',[ExcelRowPoS num2str(1) ':' ExcelRowPoE num2str(1)]);
+                eActivesheetRange.Value = app.result(j).x_mm+app.start_mm;
+                eActivesheetRange = get(sheet2,'Range',[ExcelRowPoS num2str(n+1) ':' ExcelRowPoE num2str(n+1)]);
+                eActivesheetRange.Value = app.result(j).Dprofile_cut;
+
+
+                % Image 저장
+                set(get(sheet3,'Range',['A' num2str((n-1)*25+2)]),'Value', [app.UITable_result.Data{i,1} ...
+                '(' num2str(app.result(j).division_x) ',' num2str(app.result(j).division_y) ')']) ;
+                fn_PasteImageToExcel2(sheet3, ['B' num2str((n-1)*25+2)], app.result(j).activeImage );
+                
+                pause(0.01);
+
+                end
+            end
+
+            app.stop = 1;
+            
+            % Excel Close
+            invoke(Workbook, 'Save');
+            invoke(Excel, 'Quit');
+
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+
+        end
+
+        % Button down function: UIAxes_profile
+        function UIAxes_profileButtonDown(app, event)
+
+            try
+
+                %figure(3), plot(app.result(end).x_mm, app.result(end).Dprofile)
+                %hold on
+                %line([0 app.result(end).x_mm(end)],[app.result(end).maxPeak app.result(end).maxPeak], 'color', 'r', 'LineStyle', ':')
+                %line([0 app.result(end).x_mm(end)],[app.result(end).maxPeak-app.result(end).maxPeak2Valley app.result(end).maxPeak-app.result(end).maxPeak2Valley], 'color', 'r', 'LineStyle', ':')
+                %hold off
+
+                data = app.UIAxes_profile.Children;
+                sizeOfData = size(data,1);
+                figure(3)
+                for i = 1:sizeOfData
+                    hold on
+                    plot(app.result(end).x_mm, data(i).YData)
+                    hold off
+                end
+                
+
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+
+        end
+
+        % Button pushed function: Button_stop
+        function Button_stopPushed(app, event)
+            try
+            
+            app.stop =1;
+            pause(0.01)
+            
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+
+        end
+
+        % Display data changed function: UITable_parameter
+        function UITable_parameterDisplayDataChanged(app, event)
+            newDisplayData = app.UITable_parameter.DisplayData;
+            
+            division_x = newDisplayData(11,1);
+            division_y = newDisplayData(12,1);
+
+            columnName = app.UITable_result.ColumnName(1);
+            columWidth = app.UITable_result.ColumnWidth(1);
+
+            for i = 1:division_x
+                for j = 1:division_y
+                    addColumnName = ['Max. dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['Avg. dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['5% dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['10% dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['15% dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+                    addColumnName = ['20% dL/L(%)(' num2str(i) ',' num2str(j) ')'];
+                    columnName = [columnName; addColumnName];
+
+                    addrowName = app.UITable_result.ColumnWidth(2);
+                    columWidth = [columWidth addrowName addrowName addrowName addrowName addrowName addrowName];
+                end
+            end
+
+            app.UITable_result.ColumnName = columnName;
+            app.UITable_result.ColumnWidth = columWidth;
+
+
+        end
+
+        % Value changed function: mimFileTelecentricCheckBox
+        function mimFileTelecentricCheckBoxValueChanged(app, event)
+            value = app.mimFileTelecentricCheckBox.Value;
+            
+            if value == 1
+                msgbox({'■ AVI Telecentric "mim" File M3 굵은 가로줄 입력 Parameter 안내';...
+                        '';...
+                        'Crop Th.(%) :                       0';...
+                        'Median Filter(pixels) :          0';...
+                        'Avg. Filter(pixels) :             10';...
+                        'Avg. Ref. Filter(pixels) :      48';...
+                        'ROI x(pixels) :                1300';...
+                        'ROI y(pixels) :                  175';...
+                        'Panel Hor. Side(mm) : 158.8';...
+                        'Scan Width(mm) :                3';...
+                        'Angle Name Order :             0';...
+                        'Time Name Order :              1';...
+                        'Division x :                            1';...
+                        'Division y :                            1';...
+                        '';...
+                        }, 'Information')
+            elseif value == 0
+            end
+
+        end
+
+        % Clicked callback: UITable_result
+        function UITable_resultClicked(app, event)
+        
+            try
+
+            displayRow = event.InteractionInformation.DisplayRow;
+
+            if isempty(displayRow) == 1 || app.stop == 0
+                return
+            end
+
+
+            if isempty(app.profile_struct(displayRow).Dprofile) == 0
+
+            if app.HoldCheckBox.Value == 1
+                hold(app.UIAxes_profile, 'on' )
+            end
+            plot(app.result(1).x_mm, app.profile_struct(displayRow).Dprofile,'Parent', app.UIAxes_profile)
+            hold(app.UIAxes_profile, 'off' )
+
+            end
+
+
+            catch ME
+                message = {};
+                for i = 1:size(ME.stack)
+                    add_message = [ME.stack(i).name '(' num2str(ME.stack(i).line) '번 Line)'];
+                    message = [message; add_message];
+                end
+                msgbox([ME.message; ' '; message],'Error');
+            end
+
+
+
+
+            
+        end
+
+        % Value changed function: Rotation90CounterclockCheckBox
+        function Rotation90CounterclockCheckBoxValueChanged(app, event)
+            app.rotate = app.Rotation90CounterclockCheckBox.Value;
+
+            
+        end
+
+        % Value changed function: ShowAdditionalGraphsCheckBox
+        function ShowAdditionalGraphsCheckBoxValueChanged(app, event)
+            app.show_plot = app.ShowAdditionalGraphsCheckBox.Value;
+            
+
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Get the file path for locating images
+            pathToMLAPP = fileparts(mfilename('fullpath'));
+
+            % Create ThinHorizontalLineAnalysisv31UIFigure and hide until all components are created
+            app.ThinHorizontalLineAnalysisv31UIFigure = uifigure('Visible', 'off');
+            app.ThinHorizontalLineAnalysisv31UIFigure.Position = [100 100 1417 969];
+            app.ThinHorizontalLineAnalysisv31UIFigure.Name = 'Thin Horizontal Line Analysis v3.1';
+            app.ThinHorizontalLineAnalysisv31UIFigure.Icon = fullfile(pathToMLAPP, 'icon.png');
+            app.ThinHorizontalLineAnalysisv31UIFigure.Resize = 'off';
+
+            % Create LeftPanel
+            app.LeftPanel = uipanel(app.ThinHorizontalLineAnalysisv31UIFigure);
+            app.LeftPanel.Position = [-1 357 218 613];
+
+            % Create Button_open
+            app.Button_open = uibutton(app.LeftPanel, 'push');
+            app.Button_open.ButtonPushedFcn = createCallbackFcn(app, @Button_openPushed, true);
+            app.Button_open.BackgroundColor = [1 1 0.0667];
+            app.Button_open.Position = [14 574 57 23];
+            app.Button_open.Text = 'OPEN';
+
+            % Create Button_run
+            app.Button_run = uibutton(app.LeftPanel, 'push');
+            app.Button_run.ButtonPushedFcn = createCallbackFcn(app, @Button_runPushed, true);
+            app.Button_run.BackgroundColor = [0.3922 0.8314 0.0745];
+            app.Button_run.Position = [82 574 57 23];
+            app.Button_run.Text = 'RUN';
+
+            % Create UITable_parameter
+            app.UITable_parameter = uitable(app.LeftPanel);
+            app.UITable_parameter.ColumnName = {'Value'};
+            app.UITable_parameter.ColumnWidth = {58};
+            app.UITable_parameter.RowName = {'Crop Th.(%)'; 'Median Filter(pixels)'; 'Avg. Filter(pixels)'; 'Avg. Ref. Filter(pixels)'; 'ROI x(pixels)'; 'ROI y(pixels)'; 'Panel Hor. Side(mm)'; 'Scan Width(mm)'; 'Angle Name Order'; 'Time Name Order'; 'Division x'; 'Division y'; 'Fq. cut Short(mm)'; 'Fq. cut Long(mm)'; 'Crop Left(pixels)'; 'Crop Right(pixels)'; 'Crop Top(pixels)'; 'Crop Bottom(pixels)'};
+            app.UITable_parameter.ColumnEditable = true;
+            app.UITable_parameter.DisplayDataChangedFcn = createCallbackFcn(app, @UITable_parameterDisplayDataChanged, true);
+            app.UITable_parameter.Position = [14 14 193 546];
+
+            % Create Label_state
+            app.Label_state = uilabel(app.LeftPanel);
+            app.Label_state.FontColor = [0 0 1];
+            app.Label_state.Position = [19 18 181 14];
+            app.Label_state.Text = '';
+
+            % Create Button_stop
+            app.Button_stop = uibutton(app.LeftPanel, 'push');
+            app.Button_stop.ButtonPushedFcn = createCallbackFcn(app, @Button_stopPushed, true);
+            app.Button_stop.BackgroundColor = [1 0.4118 0.1608];
+            app.Button_stop.Position = [150 574 57 23];
+            app.Button_stop.Text = 'STOP';
+
+            % Create mimFileTelecentricCheckBox
+            app.mimFileTelecentricCheckBox = uicheckbox(app.LeftPanel);
+            app.mimFileTelecentricCheckBox.ValueChangedFcn = createCallbackFcn(app, @mimFileTelecentricCheckBoxValueChanged, true);
+            app.mimFileTelecentricCheckBox.Text = '"mim" File(Telecentric)';
+            app.mimFileTelecentricCheckBox.Position = [19 81 141 22];
+
+            % Create Rotation90CounterclockCheckBox
+            app.Rotation90CounterclockCheckBox = uicheckbox(app.LeftPanel);
+            app.Rotation90CounterclockCheckBox.ValueChangedFcn = createCallbackFcn(app, @Rotation90CounterclockCheckBoxValueChanged, true);
+            app.Rotation90CounterclockCheckBox.Text = 'Rotation(90˚ Counterclock)';
+            app.Rotation90CounterclockCheckBox.Position = [19 59 165 22];
+
+            % Create ShowAdditionalGraphsCheckBox
+            app.ShowAdditionalGraphsCheckBox = uicheckbox(app.LeftPanel);
+            app.ShowAdditionalGraphsCheckBox.ValueChangedFcn = createCallbackFcn(app, @ShowAdditionalGraphsCheckBoxValueChanged, true);
+            app.ShowAdditionalGraphsCheckBox.Text = 'Show Additional Graphs';
+            app.ShowAdditionalGraphsCheckBox.Position = [19 37 150 22];
+            app.ShowAdditionalGraphsCheckBox.Value = true;
+
+            % Create RightPanel
+            app.RightPanel = uipanel(app.ThinHorizontalLineAnalysisv31UIFigure);
+            app.RightPanel.Position = [216 357 1204 613];
+
+            % Create TextArea_folder
+            app.TextArea_folder = uitextarea(app.RightPanel);
+            app.TextArea_folder.Position = [13 574 1175 23];
+
+            % Create UITable_result
+            app.UITable_result = uitable(app.RightPanel);
+            app.UITable_result.ColumnName = {'File Name'; 'Max. dL/L(%)(1_1)'; 'Avg. dL/L(%)(1_1)'; '5% dL/L(%)(1_1)'; '10% dL/L(%)(1_1)'; '15% dL/L(%)(1_1)'; '20% dL/L(%)(1_1)'};
+            app.UITable_result.ColumnWidth = {431, 88, 88, 88, 88, 88, 88};
+            app.UITable_result.RowName = {};
+            app.UITable_result.DoubleClickedFcn = createCallbackFcn(app, @UITable_resultDoubleClicked, true);
+            app.UITable_result.ClickedFcn = createCallbackFcn(app, @UITable_resultClicked, true);
+            app.UITable_result.FontSize = 11;
+            app.UITable_result.Position = [13 14 1175 546];
+
+            % Create ImagesProfilePanel
+            app.ImagesProfilePanel = uipanel(app.ThinHorizontalLineAnalysisv31UIFigure);
+            app.ImagesProfilePanel.TitlePosition = 'centertop';
+            app.ImagesProfilePanel.Title = '   Images & Profile';
+            app.ImagesProfilePanel.Position = [-1 -1 1421 359];
+
+            % Create Image_active
+            app.Image_active = uiimage(app.ImagesProfilePanel);
+            app.Image_active.ImageClickedFcn = createCallbackFcn(app, @Image_activeClicked, true);
+            app.Image_active.BackgroundColor = [0.651 0.651 0.651];
+            app.Image_active.Position = [430 22 400 301];
+
+            % Create Image_raw
+            app.Image_raw = uiimage(app.ImagesProfilePanel);
+            app.Image_raw.ImageClickedFcn = createCallbackFcn(app, @Image_rawClicked, true);
+            app.Image_raw.BackgroundColor = [0.651 0.651 0.651];
+            app.Image_raw.Position = [14 22 400 301];
+
+            % Create SamsungDisplayMintakLeeLabel
+            app.SamsungDisplayMintakLeeLabel = uilabel(app.ImagesProfilePanel);
+            app.SamsungDisplayMintakLeeLabel.FontAngle = 'italic';
+            app.SamsungDisplayMintakLeeLabel.Position = [1227 0 194 22];
+            app.SamsungDisplayMintakLeeLabel.Text = '2026,Samsung Display, Mintak Lee';
+
+            % Create RawLabel
+            app.RawLabel = uilabel(app.ImagesProfilePanel);
+            app.RawLabel.HorizontalAlignment = 'center';
+            app.RawLabel.Position = [199 319 29 22];
+            app.RawLabel.Text = 'Raw';
+
+            % Create ActiveLabel
+            app.ActiveLabel = uilabel(app.ImagesProfilePanel);
+            app.ActiveLabel.HorizontalAlignment = 'center';
+            app.ActiveLabel.Position = [611 319 38 22];
+            app.ActiveLabel.Text = 'Active';
+
+            % Create Panel
+            app.Panel = uipanel(app.ThinHorizontalLineAnalysisv31UIFigure);
+            app.Panel.Position = [843 21 561 301];
+
+            % Create UIAxes_profile
+            app.UIAxes_profile = uiaxes(app.Panel);
+            xlabel(app.UIAxes_profile, 'Position(mm)')
+            ylabel(app.UIAxes_profile, 'dL/L(%)')
+            zlabel(app.UIAxes_profile, 'Z')
+            app.UIAxes_profile.ButtonDownFcn = createCallbackFcn(app, @UIAxes_profileButtonDown, true);
+            app.UIAxes_profile.Position = [9 12 543 280];
+
+            % Create HoldCheckBox
+            app.HoldCheckBox = uicheckbox(app.Panel);
+            app.HoldCheckBox.Text = 'Hold';
+            app.HoldCheckBox.Position = [2 -2 47 22];
+
+            % Show the figure after all components are created
+            app.ThinHorizontalLineAnalysisv31UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = ThinHorLineAnalysis
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.ThinHorizontalLineAnalysisv31UIFigure)
+
+            % Execute the startup function
+            runStartupFcn(app, @startupFcn)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.ThinHorizontalLineAnalysisv31UIFigure)
+        end
+    end
+end
