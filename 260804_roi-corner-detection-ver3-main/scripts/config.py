@@ -1,0 +1,126 @@
+# scripts/config.py: default training configuration and argument parsing
+
+import os
+import sys
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+import argparse
+
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+
+DEFAULTS = dict(
+    data_dir=DATA_DIR,
+    csv_path=[
+        os.path.join(DATA_DIR, "public", "smartdoc", "gt_corners.csv"),
+        os.path.join(DATA_DIR, "public", "midv2020", "gt_corners.csv"),
+    ],
+    test_csv_path=None,
+    seed=42,
+    split_ratio=0.6,
+    dataset="public",
+    model="reg",
+    network="custom",
+    head="spatial",
+    image_size=224,
+    batch_size=4,
+    max_epochs=100,
+    patience=5,
+    warmup_epochs=1,
+    num_workers=4,
+    train_size=5000,    # None: all train samples
+    valid_size=1000,    # None: all valid samples
+    test_size=1000,     # None: all test samples
+)
+
+PREV_DATASET = {"synthetic": "public", "measured": "synthetic"}
+
+
+def cfg_get(cfg, key, default=None):
+    """Return one config value from a dict or argparse namespace."""
+    if isinstance(cfg, dict):
+        return cfg.get(key, default)
+    return getattr(cfg, key, default)
+
+
+def get_exp_name(cfg, dataset=None):
+    """Build an experiment name string from model, network, head, and dataset."""
+    model = cfg_get(cfg, "model", DEFAULTS["model"])
+    network = cfg_get(cfg, "network", DEFAULTS["network"]) or DEFAULTS["network"]
+    head = cfg_get(cfg, "head", DEFAULTS["head"]) or DEFAULTS["head"]
+    if dataset is None:
+        dataset = cfg_get(cfg, "dataset", DEFAULTS["dataset"])
+    return "%s_%s_%s_%s" % (model, network, head, dataset)
+
+
+def get_output_dir(cfg, base="outputs", dataset=None):
+    """Return the outputs/{dataset}/{model}/{exp_name} directory for the given config."""
+    if dataset is None:
+        dataset = cfg_get(cfg, "dataset", DEFAULTS["dataset"])
+    model = cfg_get(cfg, "model", DEFAULTS["model"])
+    return os.path.join(base, dataset, model, get_exp_name(cfg, dataset=dataset))
+
+
+def get_checkpoint_path(cfg, base="outputs", dataset=None):
+    """Return the model.pth checkpoint path inside the stage output directory."""
+    return os.path.join(get_output_dir(cfg, base=base, dataset=dataset), "model.pth")
+
+
+def get_prev_checkpoint_path(cfg, base="outputs"):
+    """Return the previous stage model.pth path if the current dataset has a prior stage, else None."""
+    dataset = cfg_get(cfg, "dataset", DEFAULTS["dataset"])
+    prev = PREV_DATASET.get(dataset)
+    if prev is None:
+        return None
+    return get_checkpoint_path(cfg, base=base, dataset=prev)
+
+
+def get_wrapper_kwargs(args):
+    """Collect wrapper constructor kwargs from parsed args, passing through only set values."""
+    kwargs = {}
+    if getattr(args, "network", None):
+        kwargs["network"] = args.network
+    if getattr(args, "head", None):
+        kwargs["head"] = args.head
+    image_size_models = ("seg", "det", "peak", "ridge", "gcn", "hybrid", "torchseg",
+                         "torchdet", "yolo", "detr")
+    if getattr(args, "model", None) in image_size_models and getattr(args, "image_size", None) is not None:
+        kwargs["image_size"] = args.image_size
+    warmup_models = ("reg", "offset", "seg", "det", "peak", "ridge", "gcn", "hybrid",
+                     "torchseg", "torchdet", "yolo", "detr")
+    if getattr(args, "model", None) in warmup_models and getattr(args, "warmup_epochs", None) is not None:
+        kwargs["warmup_epochs"] = args.warmup_epochs
+    return kwargs
+
+
+def parse_args():
+    """Parse command-line arguments for scripts/train.py, defaulting to the reg model."""
+    parser = argparse.ArgumentParser()
+    parser.set_defaults(**DEFAULTS)
+
+    parser.add_argument("--data_dir", type=str)
+    parser.add_argument("--csv_path", type=str, nargs="+")
+    parser.add_argument("--test_csv_path", type=str, nargs="+")
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--split_ratio", type=float)
+    parser.add_argument("--dataset", type=str)
+    parser.add_argument("--model", type=str)
+    parser.add_argument("--network", "--net", dest="network", type=str)
+    parser.add_argument("--head", type=str)
+    parser.add_argument("--image_size", type=int)
+    parser.add_argument("--batch_size", type=int)
+    parser.add_argument("--max_epochs", type=int)
+    parser.add_argument("--patience", type=int)
+    parser.add_argument("--warmup_epochs", type=int)
+    parser.add_argument("--num_workers", type=int)
+    parser.add_argument("--train_size", type=int)
+    parser.add_argument("--valid_size", type=int)
+    parser.add_argument("--test_size", type=int)
+    parser.add_argument("--device", type=str, default=None)
+    parser.add_argument("--save", action="store_true")
+    parser.add_argument("--checkpoint", type=str, default=None)
+    parser.add_argument("--output_dir", type=str, default=None)
+
+    return parser.parse_args()
