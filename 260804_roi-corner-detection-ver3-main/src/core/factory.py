@@ -1,0 +1,127 @@
+# src/core/factory.py: logger and component construction helpers
+
+import os
+import logging
+
+from src.data.dataset import CornerDataset, ImageDataset
+from src.data.dataloader import Dataloader
+from src.data.transforms import (
+    Compose, Resize, ToTensor, Normalize,
+    RandomHorizontalFlip, RandomVerticalFlip, RandomRotation,
+    ColorJitter, GaussianBlur,
+)
+
+
+def get_transform(split, image_size=224):
+    """Return a Compose of (image, corners) transforms for the given split."""
+    transforms = [Resize((image_size, image_size))]
+    if split == "train":
+        transforms += [
+            RandomHorizontalFlip(p=0.5),
+            RandomVerticalFlip(p=0.5),
+            RandomRotation(degrees=5.0),
+            ColorJitter(brightness=0.2, contrast=0.2),
+            GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
+        ]
+    transforms += [ToTensor(), Normalize()]
+    return Compose(transforms)
+
+
+def get_dataset(split, csv_path, test_csv_path=None, image_size=224, has_corners=True,
+                split_ratio=0.6, seed=42):
+    """Return the train, valid, or test split of a CornerDataset/ImageDataset with split-specific transform."""
+    dataset_cls = CornerDataset if has_corners else ImageDataset
+    if split == "test" and test_csv_path is not None:
+        subset = dataset_cls(test_csv_path)
+    else:
+        dataset = dataset_cls(csv_path)
+        train_dataset, temp_dataset = dataset.split(split_ratio, seed)
+        if test_csv_path is not None:
+            valid_dataset = temp_dataset
+            test_dataset = None
+        else:
+            valid_dataset, test_dataset = temp_dataset.split(0.5, seed)
+        subsets = {"train": train_dataset, "valid": valid_dataset, "test": test_dataset}
+        subset = subsets[split]
+    return subset.set_transform(get_transform(split, image_size))
+
+
+def get_dataloader(split, csv_path, test_csv_path=None, image_size=224, has_corners=True,
+                   split_ratio=0.6, seed=42, batch_size=32, num_workers=None, num_samples=None):
+    """Return a Dataloader for the given split, built from csv_path with split-specific transform."""
+    dataset = get_dataset(split, csv_path, test_csv_path=test_csv_path, image_size=image_size,
+                          has_corners=has_corners, split_ratio=split_ratio, seed=seed)
+    if num_samples is not None:
+        dataset = dataset.subset(num_samples, seed=seed)
+    return Dataloader(split, dataset, batch_size=batch_size, seed=seed, num_workers=num_workers)
+
+
+def get_predict_dataloader(csv_path, image_size=224, has_corners=True,
+                            batch_size=32, num_workers=0):
+    """Return a Dataloader over the full csv_path with no train/valid/test split."""
+    dataset_cls = CornerDataset if has_corners else ImageDataset
+    dataset = dataset_cls(csv_path).set_transform(get_transform("test", image_size))
+    return Dataloader("test", dataset, batch_size=batch_size, seed=42, num_workers=num_workers)
+
+
+def get_wrapper(model, device=None, **kwargs):
+    """Return a model-specific wrapper built with the given device and kwargs."""
+    if model == "reg":
+        from src.models.reg.wrapper import RegWrapper
+        return RegWrapper(device=device, **kwargs)
+    if model == "offset":
+        from src.models.offset.wrapper import OffsetWrapper
+        return OffsetWrapper(device=device, **kwargs)
+    if model == "seg":
+        from src.models.seg.wrapper import SegWrapper
+        return SegWrapper(device=device, **kwargs)
+    if model == "det":
+        from src.models.det.wrapper import DetWrapper
+        return DetWrapper(device=device, **kwargs)
+    if model == "peak":
+        from src.models.peak.wrapper import PeakWrapper
+        return PeakWrapper(device=device, **kwargs)
+    if model == "ridge":
+        from src.models.ridge.wrapper import RidgeWrapper
+        return RidgeWrapper(device=device, **kwargs)
+    if model == "gcn":
+        from src.models.gcn.wrapper import GCNWrapper
+        return GCNWrapper(device=device, **kwargs)
+    if model == "hybrid":
+        from src.models.hybrid.wrapper import HybridWrapper
+        return HybridWrapper(device=device, **kwargs)
+    if model == "torchseg":
+        from src.models.torchseg.wrapper import TorchSegWrapper
+        return TorchSegWrapper(device=device, **kwargs)
+    if model == "torchdet":
+        from src.models.torchdet.wrapper import TorchDetWrapper
+        return TorchDetWrapper(device=device, **kwargs)
+    if model == "yolo":
+        from src.models.yolo.wrapper import YoloWrapper
+        return YoloWrapper(device=device, **kwargs)
+    if model == "detr":
+        from src.models.detr.wrapper import DetrWrapper
+        return DetrWrapper(device=device, **kwargs)
+    raise NotImplementedError("model not yet implemented: %s" % model)
+
+
+def get_logger(name, output_dir=None):
+    """Return a logger with plain terminal output and, if output_dir is set, a timestamped output_dir/run.log."""
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    logger.handlers.clear()
+    logger.propagate = False
+    stream_formatter = logging.Formatter("%(message)s")
+    file_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S")
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(stream_formatter)
+    logger.addHandler(stream_handler)
+
+    if output_dir is not None:
+        os.makedirs(output_dir, exist_ok=True)
+        file_handler = logging.FileHandler(os.path.join(output_dir, "run.log"), encoding="utf-8")
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+
+    return logger
