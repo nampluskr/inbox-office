@@ -1,0 +1,492 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Qt Designer layout source for src/gui.py. -->
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1440</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>960</width>
+    <height>640</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>FFT ROI Analysis GUI</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="centralLayout">
+    <item>
+     <widget class="QSplitter" name="mainSplitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QWidget" name="filePanel">
+       <property name="minimumSize">
+        <size>
+         <width>220</width>
+         <height>0</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="filePanelLayout">
+        <item>
+         <widget class="QLabel" name="dataRootLabel">
+          <property name="text">
+           <string>Data root</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="rootPathEdit">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="fileButtonsLayout">
+          <item>
+           <widget class="QPushButton" name="browseButton">
+            <property name="text">
+             <string>Browse</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="refreshButton">
+            <property name="text">
+             <string>Refresh</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLabel" name="fileCountLabel">
+          <property name="text">
+           <string>0 file(s)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QListWidget" name="fileList">
+          <property name="selectionMode">
+           <enum>QAbstractItemView::SingleSelection</enum>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QTabWidget" name="analysisTabs">
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <widget class="QWidget" name="canvasTab">
+        <attribute name="title">
+         <string>Canvas</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="canvasLayout">
+         <item>
+          <widget class="QLabel" name="roiInstructionLabel">
+           <property name="text">
+            <string>ROI: select and drag to move; drag a selected corner handle to resize.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGraphicsView" name="canvasView"/>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="analysisTab">
+        <attribute name="title">
+         <string>Analysis</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="analysisTabLayout">
+         <item>
+          <widget class="QSplitter" name="selectedAnalysisSplitter">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <widget class="QWidget" name="cropPanel">
+            <layout class="QVBoxLayout" name="cropPanelLayout">
+             <item>
+              <widget class="QLabel" name="selectedCropLabel">
+               <property name="text">
+                <string>Selected ROI crop</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGraphicsView" name="cropView"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QSplitter" name="selectedPlotSplitter">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <widget class="QWidget" name="analysisProfilePlaceholder">
+             <property name="toolTip">
+              <string>Matplotlib profile plot placeholder</string>
+             </property>
+            </widget>
+            <widget class="QWidget" name="analysisFftPlaceholder">
+             <property name="toolTip">
+              <string>Matplotlib FFT plot placeholder</string>
+             </property>
+            </widget>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="profileTab">
+        <attribute name="title">
+         <string>Profile</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="profileTabLayout">
+         <item>
+          <widget class="QWidget" name="profilePlotPlaceholder">
+           <property name="toolTip">
+            <string>Matplotlib profile plot placeholder</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="fftTab">
+        <attribute name="title">
+         <string>FFT Intensity</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="fftTabLayout">
+         <item>
+          <widget class="QWidget" name="fftPlotPlaceholder">
+           <property name="toolTip">
+            <string>Matplotlib FFT plot placeholder</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="settingsTab">
+        <attribute name="title">
+         <string>Settings</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="settingsTabLayout">
+         <item>
+          <widget class="QScrollArea" name="settingsScrollArea">
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="settingsContents">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>700</width>
+              <height>650</height>
+             </rect>
+            </property>
+            <layout class="QVBoxLayout" name="settingsContentsLayout">
+             <item>
+              <widget class="QGroupBox" name="globalSettingsGroup">
+               <property name="title">
+                <string>Global analysis settings</string>
+               </property>
+               <layout class="QFormLayout" name="globalSettingsForm">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="rotationLabel">
+                  <property name="text">
+                   <string>Rotation</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QComboBox" name="rotationCombo">
+                  <item>
+                   <property name="text">
+                    <string>0°</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>90° counter-clockwise</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>90° clockwise</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="directionLabel">
+                  <property name="text">
+                   <string>Direction</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QComboBox" name="directionCombo">
+                  <item>
+                   <property name="text">
+                    <string>Horizontal Lines</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>Vertical Lines</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="widthLabel">
+                  <property name="text">
+                   <string>Width (mm)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QDoubleSpinBox" name="widthSpinBox">
+                  <property name="minimum">
+                   <double>0.001000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>1000000.000000000000000</double>
+                  </property>
+                  <property name="decimals">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QLabel" name="heightLabel">
+                  <property name="text">
+                   <string>Height (mm)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QDoubleSpinBox" name="heightSpinBox">
+                  <property name="minimum">
+                   <double>0.001000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>1000000.000000000000000</double>
+                  </property>
+                  <property name="decimals">
+                   <number>3</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="0">
+                 <widget class="QLabel" name="topKLabel">
+                  <property name="text">
+                   <string>FFT Top-K peaks</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="1">
+                 <widget class="QSpinBox" name="topKSpinBox">
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <number>1000</number>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="0">
+                 <widget class="QLabel" name="pixelSizeLabel">
+                  <property name="text">
+                   <string>Rotated image size</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="1">
+                 <widget class="QLabel" name="pixelSizeValueLabel">
+                  <property name="text">
+                   <string>-</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="6" column="0">
+                 <widget class="QLabel" name="scaleLabel">
+                  <property name="text">
+                   <string>Selected scale</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="6" column="1">
+                 <widget class="QLabel" name="scaleValueLabel">
+                  <property name="text">
+                   <string>-</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="roiSettingsGroup">
+               <property name="title">
+                <string>Common ROI settings</string>
+               </property>
+               <layout class="QVBoxLayout" name="roiSettingsLayout">
+                <item>
+                 <widget class="QListWidget" name="roiList">
+                  <property name="selectionMode">
+                   <enum>QAbstractItemView::SingleSelection</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="roiButtonsLayout">
+                  <item>
+                   <widget class="QPushButton" name="drawRoiButton">
+                    <property name="text">
+                     <string>Draw ROI</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="deleteRoiButton">
+                    <property name="text">
+                     <string>Delete ROI</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <layout class="QFormLayout" name="roiMetadataForm">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="roiNameLabel">
+                    <property name="text">
+                     <string>Name</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLineEdit" name="roiNameEdit"/>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="roiColorLabel">
+                    <property name="text">
+                     <string>Color</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="roiColorButton"/>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="coordinatesLabel">
+                    <property name="text">
+                     <string>Normalized coordinates</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <layout class="QGridLayout" name="coordinatesGrid">
+                    <item row="0" column="0">
+                     <widget class="QLabel" name="xminLabel">
+                      <property name="text">
+                       <string>xmin</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QLineEdit" name="xminEdit">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <widget class="QLabel" name="xmaxLabel">
+                      <property name="text">
+                       <string>xmax</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="1">
+                     <widget class="QLineEdit" name="xmaxEdit">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="0">
+                     <widget class="QLabel" name="yminLabel">
+                      <property name="text">
+                       <string>ymin</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="1">
+                     <widget class="QLineEdit" name="yminEdit">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="0">
+                     <widget class="QLabel" name="ymaxLabel">
+                      <property name="text">
+                       <string>ymax</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="3" column="1">
+                     <widget class="QLineEdit" name="ymaxEdit">
+                      <property name="readOnly">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <spacer name="settingsSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
