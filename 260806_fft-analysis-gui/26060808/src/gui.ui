@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="windowTitle">
+   <string>FFT ROI Analysis GUI</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="centralLayout">
+    <item>
+     <widget class="QSplitter" name="mainSplitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QWidget" name="explorerPanel">
+       <layout class="QVBoxLayout" name="explorerLayout">
+        <item>
+         <widget class="QLabel" name="rootTitleLabel">
+          <property name="text">
+           <string>No folder open</string>
+          </property>
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="dataRootEdit">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="placeholderText">
+           <string>Explorer</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="rootButtonsLayout">
+          <item>
+           <widget class="QPushButton" name="browseButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Open folder</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="refreshButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Refresh</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="darkThemeButton">
+            <property name="toolTip">
+             <string>Dark theme</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="lightThemeButton">
+            <property name="toolTip">
+             <string>Light theme</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QLabel" name="fileCountLabel">
+          <property name="text">
+           <string>0 files found</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTreeWidget" name="fileList">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="headerHidden">
+           <bool>true</bool>
+          </property>
+          <property name="rootIsDecorated">
+           <bool>true</bool>
+          </property>
+          <column>
+           <property name="text">
+            <string>Name</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QTabWidget" name="analysisTabs">
+       <property name="font">
+        <font>
+         <bold>true</bold>
+        </font>
+       </property>
+       <widget class="QWidget" name="canvasTab">
+        <attribute name="title">
+         <string>Image</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="canvasTabLayout">
+         <item>
+          <widget class="QLabel" name="canvasPlaceholder">
+           <property name="text">
+            <string>No image loaded</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="analysisTab">
+        <attribute name="title">
+         <string>Analysis</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="analysisTabLayout">
+         <item>
+          <layout class="QHBoxLayout" name="analysisSelectionLayout">
+           <item>
+            <widget class="QComboBox" name="roiSelector"/>
+           </item>
+           <item>
+            <widget class="QComboBox" name="directionCombo">
+             <item>
+              <property name="text">
+               <string>horizontal</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>vertical</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="settingsTab">
+        <attribute name="title">
+         <string>Settings</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="settingsTabLayout">
+         <item>
+          <widget class="QListWidget" name="roiList"/>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="roiButtonsLayout">
+           <item>
+            <widget class="QPushButton" name="addRoiButton">
+             <property name="text">
+              <string>Add ROI</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="deleteRoiButton">
+             <property name="text">
+              <string>Delete ROI</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="roiNameEdit">
+           <property name="placeholderText">
+            <string>ROI name</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="roiColorButton">
+           <property name="text">
+            <string>ROI Color</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="roiBoundsLayout">
+           <item>
+            <widget class="QLineEdit" name="xminEdit">
+             <property name="placeholderText">
+              <string>xmin</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="xmaxEdit">
+             <property name="placeholderText">
+              <string>xmax</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="yminEdit">
+             <property name="placeholderText">
+              <string>ymin</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="ymaxEdit">
+             <property name="placeholderText">
+              <string>ymax</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
