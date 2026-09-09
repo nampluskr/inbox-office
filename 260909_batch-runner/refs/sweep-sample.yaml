@@ -1,0 +1,51 @@
+- base:
+    task_dir: tasks/classification
+    epochs: 10
+    validate: true
+    early_stop: {enabled: true, patience: 3, monitor: accuracy, mode: max}
+    seed: 42
+  variants:
+    - name: bs32
+      mode: [train, evaluate, predict]
+    - name: bs16
+      mode: [train, evaluate]
+      params.data.batch_size: 16
+    - name: bs64_resnet34
+      mode: [train]
+      params.data.batch_size: 64
+      params.model.backbone: resnet34
+    - name: efficientnet_mock
+      mode: [train, evaluate, predict]
+      params.model.name: efficientnet_mock
+      params.model.backbone: efficientnet_b0
+    - name: focal_loss
+      mode: [train, evaluate, predict]
+      params.loss.name: focal_loss
+      params.loss.gamma: 2.0
+
+- base:
+    task_dir: tasks/segmentation
+    epochs: 10
+    validate: true
+    seed: 42
+  variants:
+    - name: bs32
+      mode: [evaluate]
+
+- base:
+    task_dir: tasks/detection
+    epochs: 10
+    validate: true
+    seed: 42
+  variants:
+    - name: bs32
+      mode: [train, predict]
+
+- base:
+    task_dir: tasks/anomaly_detection
+    epochs: 10
+    validate: false
+    seed: 42
+  variants:
+    - name: bs32
+      mode: [train, evaluate, predict]
