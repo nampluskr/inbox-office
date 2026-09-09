@@ -1,0 +1,43 @@
+# tasks/<task-name>/base.yaml 예시 모음.
+# 실제로는 task마다 별도 파일(tasks/classification/base.yaml 등)로 존재한다.
+# 여기서는 검토 편의를 위해 하나의 파일에 모아 둔다.
+
+- task_dir: tasks/classification
+  params:
+    data: {name: mock_cls_dataset, batch_size: 32}
+    preprocessor: {resize: 224, normalize: true}
+    model: {name: resnet_mock, backbone: resnet18}
+    loss: {name: cross_entropy}
+    optimizer: {name: adam, lr: 0.001, weight_decay: 0.0001, amp: true, grad_clip_norm: 1.0}
+    scheduler: {name: cosine}
+    metric: {names: [accuracy]}
+
+- task_dir: tasks/segmentation
+  params:
+    data: {name: mock_seg_dataset, batch_size: 32}
+    preprocessor: {resize: 256}
+    model: {name: unet_mock, backbone: resnet34}
+    loss: {name: dice}
+    optimizer: {name: adam, lr: 0.0005, weight_decay: 0.0001, amp: true, grad_clip_norm: 1.0}
+    scheduler: {name: cosine}
+    metric: {names: [iou]}
+
+- task_dir: tasks/detection
+  params:
+    data: {name: mock_det_dataset, batch_size: 32}
+    preprocessor: {resize: 416}
+    model: {name: yolo_mock, backbone: darknet_mock}
+    loss: {name: yolo_loss}
+    optimizer: {name: sgd, lr: 0.001, weight_decay: 0.0005, amp: false, grad_clip_norm: 5.0}
+    scheduler: {name: step}
+    postprocessor: {nms_threshold: 0.5}
+
+- task_dir: tasks/anomaly_detection
+  params:
+    data: {name: mock_anomaly_dataset, batch_size: 32}
+    model: {name: autoencoder_mock, backbone: none}
+    loss: {name: reconstruction_error}
+    optimizer: {name: adam, lr: 0.0001, weight_decay: 0.0, amp: false, grad_clip_norm: null}
+    scheduler: {name: none}
+    metric: {names: [auroc]}
+    postprocessor: {threshold: 0.5}
