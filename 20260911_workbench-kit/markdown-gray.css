@@ -1,0 +1,85 @@
+/* _clones/markdown-viewer 의 gray 테마 토큰을 참고해 만든 VS Code 마크다운 프리뷰 스타일 */
+
+body {
+    background-color: #353b44 !important;
+    color: #e6edf3 !important;
+}
+
+a {
+    color: #79c0ff !important;
+}
+
+a:hover {
+    color: #ced6de !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #e6edf3 !important;
+}
+
+h6 {
+    color: #ced6de !important;
+}
+
+h1, h2 {
+    border-bottom: 1px solid #717a89 !important;
+}
+
+hr {
+    border-top: 1px solid #717a89 !important;
+}
+
+blockquote {
+    color: #ced6de !important;
+    border-left: 4px solid #a1acb8 !important;
+    background-color: #444c55 !important;
+}
+
+table th,
+table td {
+    border-color: #a1acb8 !important;
+}
+
+table th {
+    background-color: #444c55 !important;
+    color: #e6edf3 !important;
+}
+
+table tr:nth-child(2n) {
+    background-color: #444c55 !important;
+}
+
+code {
+    background-color: #444c55 !important;
+    color: #e6edf3 !important;
+    border: 1px solid #717a89 !important;
+}
+
+pre {
+    background-color: #444c55 !important;
+    color: #e6edf3 !important;
+    border: 1px solid #717a89 !important;
+}
+
+pre code {
+    background-color: transparent !important;
+    border: none !important;
+}
+
+/* Prism/문법 강조 색상 (gray/dark 공통 토큰) */
+.token.comment { color: #8b949e !important; }
+.token.punctuation { color: #c9d1d9 !important; }
+.token.property,
+.token.number,
+.token.boolean,
+.token.constant { color: #79c0ff !important; }
+.token.string,
+.token.attr-name,
+.token.selector { color: #a5d6ff !important; }
+.token.operator { color: #ff7b72 !important; }
+.token.keyword,
+.token.atrule { color: #ff7b72 !important; }
+.token.function,
+.token.class-name { color: #d2a8ff !important; }
+.token.variable,
+.token.regex { color: #ffa657 !important; }
