@@ -20,7 +20,6 @@ src\
 - utils\
   - io.py
   - config.py
-- lit
 ```
 
 
