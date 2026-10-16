@@ -1,0 +1,62 @@
+# Pure PyTorch objects in LightningCLI's fixed-class model/data sections.
+# The Lightning entrypoint supplies the Wrapper and DataModule classes separately.
+seed_everything: 42
+
+model:
+  model:
+    class_path: src.torch.tasks.classification.models.cnn.model.ClassificationModel
+    init_args:
+      backbone: resnet18
+      num_classes: 10
+      weights_path: E:/backbones/resnet18-f37072fd.pth
+  num_classes: 10
+  loss_fn:
+    class_path: torch.nn.CrossEntropyLoss
+  preprocess:
+    class_path: src.torch.tasks.classification.preprocessors.classification.ClassificationPreprocess
+  postprocess:
+    class_path: src.torch.tasks.classification.postprocessors.classification.ClassificationPostprocess
+
+data:
+  # Split these two training sources into disjoint train/valid subsets.
+  valid_size: 5000
+  seed: 42
+  batch_size: 32
+  num_workers: 0
+  pin_memory: true
+  train_dataset:
+    class_path: src.torch.tasks.classification.data.cifar10.dataset.CIFAR10Dataset
+    init_args:
+      root: E:/datasets/cifar10
+      train: true
+      transform:
+        class_path: src.torch.tasks.classification.data.cifar10.transform.CIFAR10Transform
+        init_args:
+          train: true
+          image_size: 224
+  valid_dataset:
+    class_path: src.torch.tasks.classification.data.cifar10.dataset.CIFAR10Dataset
+    init_args:
+      root: E:/datasets/cifar10
+      train: true
+      transform:
+        class_path: src.torch.tasks.classification.data.cifar10.transform.CIFAR10Transform
+        init_args:
+          train: false
+          image_size: 224
+  test_dataset:
+    class_path: src.torch.tasks.classification.data.cifar10.dataset.CIFAR10Dataset
+    init_args:
+      root: E:/datasets/cifar10
+      train: false
+      transform:
+        class_path: src.torch.tasks.classification.data.cifar10.transform.CIFAR10Transform
+        init_args:
+          train: false
+          image_size: 224
+
+optimizer:
+  class_path: torch.optim.AdamW
+  init_args:
+    lr: 0.001
+    weight_decay: 0.0001
