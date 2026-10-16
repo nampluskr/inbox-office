@@ -1,0 +1,65 @@
+# Pure PyTorch objects in LightningCLI's fixed-class model/data sections.
+# Resolve relative split paths from the dl-lightning project root.
+seed_everything: 42
+
+model:
+  model:
+    class_path: src.torch.tasks.classification.models.cnn.model.ClassificationModel
+    init_args:
+      backbone: resnet18
+      num_classes: 37
+      weights_path: E:/backbones/resnet18-f37072fd.pth
+  num_classes: 37
+  loss_fn:
+    class_path: torch.nn.CrossEntropyLoss
+  preprocess:
+    class_path: src.torch.tasks.classification.preprocessors.classification.ClassificationPreprocess
+  postprocess:
+    class_path: src.torch.tasks.classification.postprocessors.classification.ClassificationPostprocess
+
+data:
+  # The JSON already defines disjoint subsets; do not split these datasets again.
+  valid_size: null
+  seed: 42
+  batch_size: 32
+  num_workers: 0
+  pin_memory: true
+  train_dataset:
+    class_path: src.torch.tasks.classification.data.oxford_pets.dataset.OxfordPetsClassification
+    init_args:
+      root: E:/datasets/oxford_pets
+      split: train
+      split_path: ../_clones/cv_boilerplate/configs/splits/oxford_pets.json
+      transform:
+        class_path: src.torch.tasks.classification.data.oxford_pets.transform.OxfordPetsTransform
+        init_args:
+          train: true
+          image_size: 224
+  valid_dataset:
+    class_path: src.torch.tasks.classification.data.oxford_pets.dataset.OxfordPetsClassification
+    init_args:
+      root: E:/datasets/oxford_pets
+      split: valid
+      split_path: ../_clones/cv_boilerplate/configs/splits/oxford_pets.json
+      transform:
+        class_path: src.torch.tasks.classification.data.oxford_pets.transform.OxfordPetsTransform
+        init_args:
+          train: false
+          image_size: 224
+  test_dataset:
+    class_path: src.torch.tasks.classification.data.oxford_pets.dataset.OxfordPetsClassification
+    init_args:
+      root: E:/datasets/oxford_pets
+      split: test
+      split_path: ../_clones/cv_boilerplate/configs/splits/oxford_pets.json
+      transform:
+        class_path: src.torch.tasks.classification.data.oxford_pets.transform.OxfordPetsTransform
+        init_args:
+          train: false
+          image_size: 224
+
+optimizer:
+  class_path: torch.optim.AdamW
+  init_args:
+    lr: 0.001
+    weight_decay: 0.0001
