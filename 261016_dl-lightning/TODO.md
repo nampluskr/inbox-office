@@ -26,11 +26,11 @@ src\
 ## 임포트 경로
 
 ```python
-project_dir = os.path.abspath(os.getcwd())
-project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-source_dir = os.path.join(project_dir, "src")
+project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+# project_dir = os.path.abspath(os.path.join(os.getcwd(), "..", "..")) # jupyter notebook
 
-sys.path.insert(0, source_dir)
+if source_dir not in sys.path:
+  sys.path.insert(0, os.path.join(project_dir, "src"))
 
 from torch.utils.data import Subset, DataLoader
 import lightning.pytorch as pl
@@ -38,6 +38,7 @@ import lightning.pytorch as pl
 from classification.data.cifar10.dataset import CIFAR10Dataset
 from classification.data.cifar10.transform import CIFAR10Transform
 from classification.models.cnn.model import CNNModel
+from inference.predictor import Predictor
 
 pl.LightningModle
 pl.DataModule
