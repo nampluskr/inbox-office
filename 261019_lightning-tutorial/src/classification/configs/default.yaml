@@ -1,0 +1,19 @@
+seed_everything: 42
+trainer:
+  logger: false
+  accelerator: auto
+  devices: 1
+  max_epochs: 10
+  precision: 32-true
+  log_every_n_steps: 1
+  num_sanity_val_steps: 0
+  enable_progress_bar: false
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        filename: best
+        monitor: valid_loss
+        mode: min
+        save_last: true
+        save_top_k: 1
+        auto_insert_metric_name: false
