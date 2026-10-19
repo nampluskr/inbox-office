@@ -1,0 +1,36 @@
+data:
+  valid_size: 5000
+  seed: 42
+  batch_size: 16
+  num_workers: 0
+  pin_memory: true
+  train_dataset:
+    class_path: src.classification.data.cifar10.dataset.CIFAR10Dataset
+    init_args:
+      root: E:/datasets/cifar10
+      train: true
+      transform:
+        class_path: src.classification.data.cifar10.transform.CIFAR10Transform
+        init_args:
+          train: true
+          image_size: 224
+  valid_dataset:
+    class_path: src.classification.data.cifar10.dataset.CIFAR10Dataset
+    init_args:
+      root: E:/datasets/cifar10
+      train: true
+      transform:
+        class_path: src.classification.data.cifar10.transform.CIFAR10Transform
+        init_args:
+          train: false
+          image_size: 224
+  test_dataset:
+    class_path: src.classification.data.cifar10.dataset.CIFAR10Dataset
+    init_args:
+      root: E:/datasets/cifar10
+      train: false
+      transform:
+        class_path: src.classification.data.cifar10.transform.CIFAR10Transform
+        init_args:
+          train: false
+          image_size: 224
