@@ -1,0 +1,7 @@
+model:
+  backbone: custom
+  in_channels: 3
+  num_classes: 10
+  weights_path: null
+  learning_rate: 0.001
+  weight_decay: 0.0001
