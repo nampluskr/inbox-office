@@ -1,0 +1,14 @@
+[datasets]
+mnist = "E:/datasets/mnist"
+cifar10 = "E:/datasets/cifar10"
+mvtec = "E:/datasets/mvtec"
+btad = "E:/datasets/btad"
+imagenette = "E:/datasets/imagenette2"
+visa = "E:/datasets/visa"
+
+[backbones]
+resnet18 = "E:/backbones/resnet18-f37072fd.pth"
+resnet50 = "E:/backbones/resnet50-0676ba61.pth"
+efficientnet_b0 = "E:/backbones/efficientnet_b0_rwightman-7f5810bc.pth"
+efficientad_small = "E:/backbones/efficientad_pretrained_weights/pretrained_teacher_small.pth"
+efficientad_medium = "E:/backbones/efficientad_pretrained_weights/pretrained_teacher_medium.pth"
