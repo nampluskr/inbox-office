@@ -1,0 +1,6 @@
+[datasets]
+mnist = "E:/datasets/mnist"
+
+
+[backbones]
+resnet18 = "E:/backbones/resnet18-f37072fd.pth"
