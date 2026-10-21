@@ -1,0 +1,8 @@
+data:
+  root: null
+  valid_size: 5000
+  seed: 42
+  batch_size: 16
+  num_workers: 0
+  pin_memory: true
+  image_size: 32
