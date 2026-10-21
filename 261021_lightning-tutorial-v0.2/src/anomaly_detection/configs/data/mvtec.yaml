@@ -1,0 +1,10 @@
+data:
+  root: null
+  category: bottle
+  valid_ratio: 0.4
+  seed: 42
+  batch_size: 8
+  num_workers: 0
+  pin_memory: true
+  image_size: 256
+  normalize: true
